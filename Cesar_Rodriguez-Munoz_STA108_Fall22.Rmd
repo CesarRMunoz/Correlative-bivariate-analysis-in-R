@@ -1,0 +1,223 @@
+---
+title: Are the Number of Days a Patient Spends in the Hospital Predictive of Their
+  Probability of Infection?
+author: "Cesar Rodriguez-Munoz"
+date: "2022-10-15"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r, echo = FALSE}
+#putting this at the start of the file to read in data
+hospital.data <- read.csv("hospital.csv", header=TRUE)
+
+```
+
+## I. Introduction
+
+The purpose of this report is to test if the estimated probability of a patient catching an infection can be predicted with the number of days that the patient has been in the hospital. The utility of this analysis is to provide evidence if the number of days a patient has been in a hospital is correlated with a patient's probability of infection. If a significant relationship is found, this could warrant further research to determine a causal relationship.
+
+To test the correlative relationship, I will conduct a hypothesis test at a 95% significance level for whether there exists a significant linear relationship between these variables.
+
+I have also been tasked with performing specific predictions using the model I create. This includes predicting the infection risk of a patient who stayed at the hospital for eight days, predicting the infection risk of a patient who stayed for forty days, and predicting the average infection risk of a patient who stayed for 15 days.
+
+## II. Summary of Data
+
+In this section, I will provide a summary of the data through the use of plots. The plots will include interpretations for meaningful inference.
+
+The first plot I will provide is a box plot. For an Ordinary Least Squared regression, outliers significantly add to our Sum of Squared Errors, or SSE, because the residual value is squared. This means a larger residual exponentially adds to the SSE and will diminish the predictive power of the model. These outliers can be filtered by creating a box plot, and I will do that for both variables:
+
+```{r, echo = FALSE}
+boxplot(hospital.data$Infect, data = hospital.data,
+        main = "Probability of Infection for the Patient",
+        xlab = "Probability Expressed as a Percent",
+        horizontal = TRUE)
+
+boxplot(hospital.data$Days, data = hospital.data,
+        main = "Number of Days the Patient Has Been in the Hospital",
+        xlab = "Values Correspond to Literal Days spent in the Hospital",
+        horizontal = TRUE)
+```
+
+The box plot shows us The average of the data, which is the thick black line in the middle of the large gray box. The smaller gray boxes, which are separated by the average line, represent the 25th quartiles above and below the mean. The area covered by the dashed lines are the other two quartiles.
+
+The points that fall beyond the minimum and maximum of the box plot are considered outliers. From these box plots, we can see a few outliers. These will be removed in the next section.
+
+Next, I will use a scatter plot to determine the general trend of the data. Here is the scatter plot of the data:
+
+```{r, echo = FALSE}
+plot(hospital.data$Days, hospital.data$Infect,
+     main = "Number of Days in Hospital vs Probability of Infection",
+     xlab = "Number of days a patient has been in the hospital",
+     ylab = "Estimated probability of infection for the patient"
+)
+
+```
+
+From this simple plot, there does seem to be a general trend upward, which would imply a positive association between the number of days a patient has spent in the hospital and the estimated probability of infection. We cannot conclude this is a significant relationship until a test, which will be done in another section.
+
+## III. Diagnostics
+
+To begin this section, I will cover the assumption used to create a regression model, but before discussing the assumptions, it should be noted that our model is as follows:
+
+Y = b0 + b1*X + e
+
+Where "b0" is the intercept, "b1" is the slope coefficient, and "e" is the error term. The error term is a variable that contains all other information that predicts Y. Any other independent variable that has predictive power over Y is contained within the error term.
+
+Now for our assumptions:
+
+Our first assumption is that the error term is independent and identically distributed, or IID, normally with mean 0 and variance sigma squared.
+
+Our second assumption is that the distribution of Y conditional on a known value of X is a linear combination of normal random variables. This gives us that the expectation of Y is equal to the true parameters "Beta0 + Beta1*X" and that the variance of Y is equal to the variance of the error term. This means that Y is normally distributed with mean "Beta0 + Beta1*X" and variance sigma squared.
+
+Next, I will remove the outliers from the data. This code will be shown at the bottom of the document.
+
+```{r, echo = FALSE}
+#Removing outliers
+
+#this section of code stores the outliers for the "Days" variable within the vector "outlier.Days"
+Q1.Days = quantile(hospital.data$Days, 0.25)
+Q3.Days = quantile(hospital.data$Days, 0.75)
+
+lowerQ.Days = Q1.Days - 1.5*(Q3.Days - Q1.Days)
+upperQ.Days = Q3.Days + 1.5*(Q3.Days - Q1.Days)
+
+outlier.Days = which(hospital.data$Days > upperQ.Days| hospital.data$Days < lowerQ.Days)
+
+#this section of code stores the outliers for the "Infect" variable within the vector "outlier.Infect"
+Q1.Infect = quantile(hospital.data$Infect, 0.25)
+Q3.Infect = quantile(hospital.data$Infect, 0.75)
+
+lowerQ.Infect = Q1.Infect - 1.5*(Q3.Infect - Q1.Infect)
+upperQ.Infect = Q3.Infect + 1.5*(Q3.Infect - Q1.Infect)
+
+outlier.Infect = which(hospital.data$Infect > upperQ.Infect| hospital.data$Infect < lowerQ.Infect)
+
+#Finally, I will redefine the data set which will not include the outliers
+new.hospital.data = hospital.data[-c(outlier.Days,outlier.Infect), ]
+
+#Finished Removing outliers
+
+#rename the variables of the new.hospital.data vector
+new.Days = new.hospital.data$Days
+new.Infect = new.hospital.data$Infect
+
+```
+
+## IV. Analysis
+
+Now I will being the analysis of the data. To start, I want to display a scatter plot without the outliers and with a line of best fit.
+
+```{r, echo=FALSE}
+#create a linear model
+lin.model = lm(new.Infect ~ new.Days, data=new.hospital.data)
+
+plot(new.Days, new.Infect,
+     main = "Number of Days in Hospital vs Probability of Infection",
+     xlab = "Number of Days a Patient Has Spent in the Hospital",
+     ylab = "Estimated Probability of Infection for the Patient"
+)
+abline(lin.model, col = "blue")
+
+
+```
+
+Now with this code, I will be able to pull up the summary information of the model created by R.
+
+Let's first start with the coefficients of our regression model:
+```{r, echo=FALSE}
+the.coefs = lin.model$coefficients
+the.coefs
+```
+
+Let's define what each of the coefficients tells us. The slope coefficient, or b1, tells us that for each additional day spent in the hospital, a patient's estimated probability of infection increases by 0.3427 percent. The intercept tells us that a person who has spent zero days in the hospital is predicted to have an estimated probability of infection of 1.0927 percent. It is arguable if the intercept has a meaningful interpretation.
+
+Next, let's look at the standard error.
+```{r, echo=FALSE}
+s.e = summary(lin.model)$sigma
+s.e
+```
+
+The standard error tells us how far we expect real-world observations to be from our regression line. The more standard errors a value is from the line, the less likely we expect to observe that data point. For our data set, the standard error is 0.9724, and we expect most observed values to be within two standard errors of the predicted value, which would be plus or minus 1.9448 percent. Despite this, we would never expect an observed value to fall below 0, because a patient cannot have a negative likelihood of being infected.
+
+Let's also look at the 95% confidence interval for our slope coefficient. Because the intercept has a less meaningful interpretation, I will not be focusing on it.
+```{r, echo=FALSE}
+CI = confint(lin.model, level = 0.95)
+slope.CI = CI[2, ]
+slope.CI
+```
+
+This tells us that the true slope coefficient, Beta 1, exists within the interval [0.1868,0.4985] with 95% confidence. 
+
+Now, I will show the test statistic and the corresponding p-value for the slope coefficient.
+```{r,echo=FALSE}
+summary(lin.model)$coefficients
+
+#code below to get the critical value
+n.Days = length(new.Days)
+qt(p = 0.05/2, df = n.Days-2, lower.tail = FALSE)
+```
+
+R shows us that the test statistic for the slope coefficient is 4.3673, and the corresponding p-value is 0.00003356. This means that on a t-distribution, with mean zero and standard deviation one, the slope coefficient is over 4 standard deviations away from the mean. The p-value tells us that the mass under the distribution corresponding to the test statistic is 0.00003356. 
+
+In the "Inference" section, I will compare the test statistic to the critical value of 1.9867 and I will compare the p-value to the alpha level of 0.05.
+
+It should be noted that this test statistic was conducted assuming the following null and alternatives hypotheses:
+
+Null hypothesis: Beta1 = 0
+
+Alternative Hypothesis: Beta1 != 0
+
+To end this section, I will perform the predicts listed in the intro of this report.
+```{r, echo=FALSE}
+print("Predicting the infection risk of a patient who stayed at the hospital for 8 days:")
+pre.eight = data.frame(new.Days = 8)
+predict(lin.model, pre.eight, interval = 'predict')
+```
+
+This prediction has a similar inference to the last one. It tells us that the model predicts that a new patient who has been in the hospital for 40 days has a probability for infection of 14.7989%. I am 95% confident that a true observed probability of infection, given that a patient was in the hospital for forty days, is
+within the interval [9.643121,19.95457].
+
+```{r, echo=FALSE}
+print("Predicting the infection risk of a patient who stayed at the hospital for 40 days:")
+pre.forty = data.frame(new.Days = 40)
+predict(lin.model, pre.forty, interval = 'predict')
+```
+
+This prediction has a similar inference to the last one. It tells us that the model predicts that a new patient who has been in the hospital for forty days has a probability for infection of 14.7989%. I am 95% confident that a true observed probability of infection, given that a patient was in the hospital for forty days, is within the interval [9.643121,19.95457].
+
+```{r, echo=FALSE}
+print("Predicting the average infection risk of a patient who stayed at the hospital for 15 days:")
+av.fifteen = data.frame(new.Days = 15)
+predict(lin.model, av.fifteen, interval = 'confidence')
+```
+
+This prediction has a slightly different interpretation because we wanted to know the average risk of infection as opposed to the risk of infection for a new patient. This tells us that the average patient who has been in the hospital for fifteen days has a probability for infection of 6.2325%, and I am 95% confident that the observed patient's probability of infection, given that they are in the hospital for fifteen days, exists within the interval [5.3306,7.1344].
+
+We can notice that the interval for an average prediction is much tighter than a prediction of a new patient, despite both tests being done at the 95% confidence level. This is simply because the formula for the standard deviation of our predicted infection risk of a new patient creates a larger value than that of the formula for the average patient. This will mean that the confidence interval for a new patient is always wider than that of an average patient.
+
+## V. Interprestions
+
+Now I will interpret the test statistic and p-value I found earlier.
+
+In all cases, if a calculated test statistic is greater than the critical value, we will reject the null hypothesis. In this case, the test statistic was 4.3673 and the critical value was 1.9867, therefore I will reject the null hypothesis that the true slope coefficient is equal to zero. This would imply a significant linear relationship between the days a patient spends in the hospital and their probability for infection.
+
+The p-value approach will produce the same inference to reject the null. As stated before, the p-value simply corresponds to weight under the t distribution at the given test statistic. Because the p-value is less than the alpha value, we can say that the probability that we observed a non-zero value for the slope coefficient of days spent in the hospital and probability of infection, in a world where we assume the slope coefficient to be zero, is low enough to imply the result is statistically significant at the 95% confidence level. Because the p-value was so small, at 0.00003356, we could also conclude that there would be statistical significance at the 99% confidence level.
+
+In all cases of confidence intervals of a parameter, if the interval does not include zero, we can imply statistical significance at that confidence level.
+
+## VI. Conclusion
+
+In conclusion, I can state that there is a significant relationship between the days a patient has spent in the hospital and their probability of infection, at the 95% confidence level, and even at the 99% confidence level.
+
+Two points should be noted.
+
+First, I did not test for a significant positive relationship, only that a relationship between the variables did exist. If I wanted to test for a significant positive relationship, I would have stated the null hypothesis to be that Beta1 <= 0 and that the alternative hypothesis to be that Beta0 > 0. It could be the case that if this test were done, a significant result would not be obtained, and we would fail to reject the null. This warrants a separate analysis.
+
+Second, this report did not test for a causal relationship. This is merely a correlative relationship. A separate analysis would have to be conducted to prove a causal relationship between days spent in the hospital and the probability of infection for a patient.
+
+This concludes my report.
+
+# Code Appendix
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+```
